@@ -1,11 +1,20 @@
-from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
+from rest_framework.serializers import (
+    ModelSerializer,
+    SlugRelatedField,
+    CurrentUserDefault,
+    ValidationError
+)
+
+from posts.models import Comment, Post, Follow, Group, User
 
 
-from posts.models import Comment, Post
+class GroupSerializer(ModelSerializer):
+    class Meta:
+        model = Group
+        fields = '__all__'
 
 
-class PostSerializer(serializers.ModelSerializer):
+class PostSerializer(ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
@@ -13,11 +22,29 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        read_only=True, slug_field='username'
-    )
+class CommentSerializer(ModelSerializer):
+    author = SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
         fields = '__all__'
         model = Comment
+        read_only_fields = ('post', )
+
+
+class FollowSerializer(ModelSerializer):
+    user = SlugRelatedField(
+        slug_field='username', read_only=True, default=CurrentUserDefault()
+    )
+    following = SlugRelatedField(
+        slug_field='username', queryset=User.objects.all()
+    )
+
+    class Meta:
+        fields = ('user', 'following')
+        model = Follow
+
+    def validate_following(self, value):
+        if self.context['request'].user == value:
+            raise ValidationError(
+                'You cannot to follow yourself')
+        return value
