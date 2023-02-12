@@ -5,7 +5,7 @@ from rest_framework.viewsets import (
     ReadOnlyModelViewSet,
     GenericViewSet
 )
-from rest_framework import mixins
+from rest_framework import mixins, filters
 from rest_framework.pagination import LimitOffsetPagination
 
 from posts.models import Comment, Group, Post, Follow, User
@@ -57,13 +57,11 @@ class FollowViewSet(mixins.CreateModelMixin,
 
     serializer_class = FollowSerializer
     permission_classes = [UserIsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['following__username']
 
     def get_queryset(self):
         queryset = Follow.objects.filter(user=self.request.user)
-        following = self.request.query_params.get('search')
-        if following:
-            following_user = get_object_or_404(User, username=following)
-            queryset = queryset.filter(following=following_user)
         return queryset
 
     def perform_create(self, serializer):
